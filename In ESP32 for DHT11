@@ -1,0 +1,76 @@
+// Tech Trends Shameer
+
+#define BLYNK_TEMPLATE_ID "TMPL62sfM3NGF"
+#define BLYNK_TEMPLATE_NAME "DHT11"
+#define BLYNK_AUTH_TOKEN "YHOiFM6rBVVDZMbGWb6RAM0GdFFFLTGg"
+
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <DHT.h>
+
+// WiFi Credentials
+char auth[] = BLYNK_AUTH_TOKEN;
+char ssid[] = "Gryffindor";  // Your WiFi SSID
+char pass[] = "88888888";    // Your WiFi Password
+
+// Timer for Blynk
+BlynkTimer timer;
+
+// DHT11 Sensor Settings
+#define DHTPIN 4  // Use GPIO4 (D4) for DHT11 data pin
+#define DHTTYPE DHT11  
+DHT dht(DHTPIN, DHTTYPE);
+
+// Function to read and send sensor data
+void sendSensor() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature(); // Celsius
+
+  if (isnan(h) || isnan(t)) {
+    Serial.println("❌ Failed to read from DHT sensor!");
+    return;
+  }
+
+  // Send to Blynk Virtual Pins
+  Blynk.virtualWrite(V0, t);
+  Blynk.virtualWrite(V1, h);
+
+  // Print data to Serial Monitor
+  Serial.print("🌡 Temperature: ");
+  Serial.print(t);
+  Serial.print("°C  |  💧 Humidity: ");
+  Serial.print(h);
+  Serial.println("%");
+}
+
+// Reconnect WiFi if disconnected
+void checkWiFi() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠️ WiFi Disconnected! Reconnecting...");
+    WiFi.begin(ssid, pass);
+    delay(5000);
+  }
+}
+
+void setup() {   
+  Serial.begin(115200);
+  Serial.println("\n🔄 Initializing ESP32 + DHT11 + Blynk...");
+
+  // Start DHT sensor
+  dht.begin();
+
+  // Connect to Blynk
+  Blynk.begin(auth, ssid, pass);
+
+  // Run sensor function every 2 seconds (2000ms)
+  timer.setInterval(2000L, sendSensor);
+
+  // Check WiFi status every 10 seconds
+  timer.setInterval(10000L, checkWiFi);
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
+}
