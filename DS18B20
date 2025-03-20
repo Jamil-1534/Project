@@ -1,0 +1,79 @@
+// Tech Trends Shameer
+// Temperature Monitor Using DS18B20 Sensor (ESP32)
+#define BLYNK_TEMPLATE_ID "TMPL6FBRzt65p"
+#define BLYNK_TEMPLATE_NAME "DS18B20"
+#define BLYNK_AUTH_TOKEN "0icH6iVzA4A4LZDykhoeaJSGwf_rYY40"
+
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <BlynkSimpleEsp32.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// DS18B20 Temperature Sensor
+#define DS18B20 4  // Use GPIO4 (D4) for DS18B20 data pin
+OneWire oneWire(DS18B20);
+DallasTemperature sensor(&oneWire);
+
+// WiFi Credentials
+char auth[] = BLYNK_AUTH_TOKEN;
+char ssid[] = "Gryffindor";  // Enter your WiFi SSID
+char pass[] = "88888888";  // Enter your WiFi Password
+
+// Blynk Timer
+BlynkTimer timer;
+
+// Function to read and send sensor data
+void sendSensor() {
+  sensor.requestTemperatures();
+  
+  float tempC = sensor.getTempCByIndex(0);
+  float tempF = sensor.getTempFByIndex(0);
+
+  if (tempC == DEVICE_DISCONNECTED_C) {
+    Serial.println("❌ DS18B20 Sensor Not Connected!");
+    return;
+  }
+
+  // Print Temperature Data
+  Serial.print("🌡 Temperature: ");
+  Serial.print(tempC);
+  Serial.print("°C | ");
+  Serial.print(tempF);
+  Serial.println("°F");
+
+  // Send Data to Blynk
+  Blynk.virtualWrite(V0, tempC);
+  Blynk.virtualWrite(V1, tempF);
+}
+
+// Reconnect WiFi if Disconnected
+void checkWiFi() {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("⚠️ WiFi Disconnected! Reconnecting...");
+    WiFi.begin(ssid, pass);
+    delay(5000);
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("\n🔄 Initializing ESP32 + DS18B20 + Blynk...");
+
+  // Start DS18B20 sensor
+  sensor.begin();
+
+  // Connect to Blynk
+  Blynk.begin(auth, ssid, pass);
+
+  // Run sensor function every 2 seconds
+  timer.setInterval(2000L, sendSensor);
+
+  // Check WiFi status every 10 seconds
+  timer.setInterval(10000L, checkWiFi);
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
+}
